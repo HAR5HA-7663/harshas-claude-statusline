@@ -78,23 +78,42 @@ if [ -n "$tui_mode" ]; then
   tui_str=" ${SEP} ${D}TUI${R} ${CYAN}${tui_mode}${R}"
 fi
 
-# ── chrome flag (walk parent processes for claude --chrome) ───────────────────
-chrome_str=""
-chrome_on=0
+# ── claude CLI flags (walk parent processes for the claude command) ───────────
+claude_cmd=""
 pid=$PPID
 for i in 1 2 3 4 5 6 7 8; do
   [ -z "$pid" ] || [ "$pid" = "0" ] || [ "$pid" = "1" ] && break
   cmd=$(ps -p "$pid" -o command= 2>/dev/null)
   if echo "$cmd" | grep -qE '(^| )claude( |$)'; then
-    if echo "$cmd" | grep -q -- '--chrome'; then chrome_on=1; fi
+    claude_cmd="$cmd"
     break
   fi
   pid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ')
 done
-if [ "$chrome_on" = "1" ]; then
+has_flag() { echo "$claude_cmd" | grep -q -- "$1"; }
+
+# CHROME — always shown (user wants explicit on/off)
+if has_flag '--chrome'; then
   chrome_str="${D}CHROME${R} ${GREEN}on${R}"
 else
   chrome_str="${D}CHROME${R} ${RED}off${R}"
+fi
+
+# Flag-only segments — show only when enabled
+flags_str=""
+if has_flag '--fast'; then
+  flags_str="${flags_str} ${SEP} ${D}FAST${R} ${YEL}on${R}"
+fi
+if has_flag '--debug'; then
+  flags_str="${flags_str} ${SEP} ${D}DEBUG${R} ${MAG}on${R}"
+fi
+if has_flag '--verbose'; then
+  flags_str="${flags_str} ${SEP} ${D}VERBOSE${R} ${CYAN}on${R}"
+fi
+if has_flag '--continue'; then
+  flags_str="${flags_str} ${SEP} ${D}CONT${R} ${GREEN}on${R}"
+elif has_flag '--resume'; then
+  flags_str="${flags_str} ${SEP} ${D}RESUMED${R} ${GREEN}on${R}"
 fi
 
 # ── extra usage ───────────────────────────────────────────────────────────────
@@ -165,7 +184,7 @@ fi
 # ── assemble ──────────────────────────────────────────────────────────────────
 line1="${WHITE}${short_cwd}${R}${git_str}"
 [ -n "$model" ] && line1="${line1} ${SEP} ${B}${CYAN}${model}${R}"
-line1="${line1}${mcp_str}${skill_str}${effort_str}${extra_str}${tui_str} ${SEP} ${chrome_str}"
+line1="${line1}${mcp_str}${skill_str}${effort_str}${extra_str}${tui_str}${flags_str} ${SEP} ${chrome_str}"
 
 line2=""
 [ -n "$ctx_str" ] && line2="${ctx_str}"
