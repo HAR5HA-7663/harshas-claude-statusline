@@ -16,6 +16,7 @@ effort=$(g '.reasoning_effort')
 [ -z "$effort" ] && effort=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 extra_enabled=$(jq -r '.extraUsageEnabled // empty' "$HOME/.claude.json" 2>/dev/null)
 extra_reason=$(jq -r '.cachedExtraUsageDisabledReason // empty' "$HOME/.claude.json" 2>/dev/null)
+tui_mode=$(jq -r '.tui // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 
 # ── ANSI ──────────────────────────────────────────────────────────────────────
 R="\033[0m"; B="\033[1m"; D="\033[2m"
@@ -69,6 +70,12 @@ if [ -n "$effort" ]; then
     low)    effort_str=" ${SEP} ${D}EFFORT${R} ${D}${effort}${R}" ;;
     *)      effort_str=" ${SEP} ${D}EFFORT${R} ${CYAN}${effort}${R}" ;;
   esac
+fi
+
+# ── TUI mode (only shown when explicitly set) ─────────────────────────────────
+tui_str=""
+if [ -n "$tui_mode" ]; then
+  tui_str=" ${SEP} ${D}TUI${R} ${CYAN}${tui_mode}${R}"
 fi
 
 # ── chrome flag (walk parent processes for claude --chrome) ───────────────────
@@ -158,7 +165,7 @@ fi
 # ── assemble ──────────────────────────────────────────────────────────────────
 line1="${WHITE}${short_cwd}${R}${git_str}"
 [ -n "$model" ] && line1="${line1} ${SEP} ${B}${CYAN}${model}${R}"
-line1="${line1}${mcp_str}${skill_str}${effort_str}${extra_str} ${SEP} ${chrome_str}"
+line1="${line1}${mcp_str}${skill_str}${effort_str}${extra_str}${tui_str} ${SEP} ${chrome_str}"
 
 line2=""
 [ -n "$ctx_str" ] && line2="${ctx_str}"
