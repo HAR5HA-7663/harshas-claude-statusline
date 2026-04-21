@@ -163,6 +163,21 @@ if [ -n "$transcript" ] && [ -f "$transcript" ]; then
   tok_total="${D}TOT${R} ${B}${WHITE}$(fmt $t_total)${R}"
 fi
 
+# ── active agents (Agent tool_use without matching tool_result) ───────────────
+agents_str=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+  active=$(tail -n 2000 "$transcript" 2>/dev/null | jq -s -r '
+    (map(select(.message.content?) | .message.content[]? |
+         select(.type=="tool_use" and .name=="Agent") | .id) | unique) as $uses |
+    (map(select(.message.content?) | .message.content[]? |
+         select(.type=="tool_result") | .tool_use_id) | unique) as $done |
+    ($uses - $done) | length' 2>/dev/null)
+  active=${active:-0}
+  if [ "$active" -gt 0 ]; then
+    agents_str="${D}AGENTS${R} ${YEL}${active}${R}"
+  fi
+fi
+
 # ── rate limits ───────────────────────────────────────────────────────────────
 rate_color() {
   local p=$1
@@ -191,9 +206,10 @@ line2=""
 [ -n "$tok_in" ]    && line2="${line2}${line2:+ ${SEP} }${tok_in}"
 [ -n "$tok_out" ]   && line2="${line2}${line2:+ ${SEP} }${tok_out}"
 [ -n "$tok_cache" ] && line2="${line2}${line2:+ ${SEP} }${tok_cache}"
-[ -n "$tok_total" ] && line2="${line2}${line2:+ ${SEP} }${tok_total}"
+[ -n "$tok_total" ]  && line2="${line2}${line2:+ ${SEP} }${tok_total}"
 [ -n "$fh_str" ]  && line2="${line2}${line2:+ ${SEP} }${fh_str}"
-[ -n "$sd_str" ]  && line2="${line2}${line2:+ ${SEP} }${sd_str}"
+[ -n "$sd_str" ]     && line2="${line2}${line2:+ ${SEP} }${sd_str}"
+[ -n "$agents_str" ] && line2="${line2}${line2:+ ${SEP} }${agents_str}"
 
 printf "%b\n" "$line1"
 [ -n "$line2" ] && printf "%b" "$line2"
